@@ -17,32 +17,25 @@ const accidentValidationSchema = (req, res, next) => {
     }),
 
     location: Joi.object({
-      latitude: Joi.number().min(-90).max(90).required().messages({
-        "number.base": "Latitude must be a number",
-        "number.min": "Latitude must be ≥ -90",
-        "number.max": "Latitude must be ≤ 90",
-        "any.required": "Latitude is required",
-      }),
-
-      longitude: Joi.number().min(-180).max(180).required().messages({
-        "number.base": "Longitude must be a number",
-        "number.min": "Longitude must be ≥ -180",
-        "number.max": "Longitude must be ≤ 180",
-        "any.required": "Longitude is required",
-      }),
-    })
-      .required()
-      .messages({
-        "any.required": "Location is required",
-      }),
+      latitude: Joi.number().min(-90).max(90).required(),
+      longitude: Joi.number().min(-180).max(180).required(),
+    }).required(),
 
     images: Joi.array()
-      .items(Joi.string().uri())
+      .items(
+        Joi.object({
+          url: Joi.string().uri().required().messages({
+            "string.uri": "Image must be a valid Cloudinary URL",
+          }),
+          public_id: Joi.string().required().messages({
+            "any.required": "Cloudinary public_id is required",
+          }),
+        })
+      )
       .max(5)
       .optional()
       .messages({
         "array.max": "Maximum 5 images are allowed",
-        "string.uri": "Each image must be a valid URL",
       }),
   }).options({ stripUnknown: true });
 
