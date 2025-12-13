@@ -1,10 +1,17 @@
-const express = require("express");
-const app = express();
-const port = 5000;
+const accidentRouter = require("./routes/accidentRoutes");
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+const express = require("express");
+require("dotenv").config();
+const databaseConnection = require("./config/dbConfig");
+const app = express();
+const port = process.env.PORT || 5000;
+
+databaseConnection();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use("/api/v1/accidents", accidentRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
