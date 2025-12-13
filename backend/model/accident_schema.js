@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const accidentSchema = new mongoose.Schema(
@@ -8,12 +7,14 @@ const accidentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
     description: {
       type: String,
       required: true,
       minlength: 3,
       maxlength: 500,
     },
+
     location: {
       latitude: {
         type: Number,
@@ -28,30 +29,27 @@ const accidentSchema = new mongoose.Schema(
         max: 180,
       },
     },
+
     images: [
       {
-        type: String,
-        validate: {
-          validator: function (v) {
-            return /^https?:\/\/.+/.test(v);
-          },
-          message: (props) => `${props.value} is not a valid URL!`,
+        url: {
+          type: String,
+          required: true,
+        },
+        public_id: {
+          type: String,
+          required: true,
         },
       },
     ],
+
     status: {
       type: String,
       enum: ["reported", "in-progress", "resolved"],
       default: "reported",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
-
-accidentSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-});
 
 module.exports = mongoose.model("Accident", accidentSchema);
