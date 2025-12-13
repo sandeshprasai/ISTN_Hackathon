@@ -1,9 +1,11 @@
+// backend/controllers/verification.controller.js (or wherever your updateAccidentStatus is)
 const mongoose = require("mongoose");
 const Accident = require("../model/accident_schema");
 const Ambulance = require("../model/ambulance.model");
 const PoliceStation = require("../model/PoliceStation.model");
 const Hospital = require("../model/Hospital.model");
 const { getNearestByDriving } = require("../services/locationService");
+const { dispatchAmbulance } = require("../services/dispatchAmbulance.service");
 const { notifyServices } = require("../services/notificationDispatcher");
 
 exports.updateAccidentStatus = async (req, res, next) => {
@@ -13,31 +15,47 @@ exports.updateAccidentStatus = async (req, res, next) => {
 
     // Validation
     if (!mongoose.Types.ObjectId.isValid(_id))
-      return res.status(400).json({ success: false, message: "Invalid accident ID" });
-    if (!["ACCEPTED", "REJECTED"].includes(status))
-      return res.status(400).json({ success: false, message: "Invalid status value" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid accident ID" });
+
+    // Allow both ACCEPTED/REJECTED for admin, and also "verified" if that's your workflow
+    if (!["ACCEPTED", "REJECTED", "verified"].includes(status))
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid status value" });
 
     // Update status
     const updatedAccident = await Accident.findByIdAndUpdate(
       _id,
-      { status, reviewedAt: new Date() },
+      {
+        status,
+        reviewedAt: new Date(),
+        verifiedBy: req.user?._id, // If you have authentication
+      },
       { new: true }
     );
+
     if (!updatedAccident)
-      return res.status(404).json({ success: false, message: "Accident not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Accident not found" });
 
     // Initialize result variables
     let nearestAmbulances = [];
     let nearestPoliceStations = [];
     let nearestHospitals = [];
 
-    if (status === "ACCEPTED") {
+    // 🔥 DISPATCH ONLY IF ACCEPTED/VERIFIED
+    if (status === "ACCEPTED" || status === "verified") {
       const { latitude, longitude } = updatedAccident.location;
 
       if (latitude != null && longitude != null) {
         // Get all services
         const ambulances = await Ambulance.find({});
         const hospitals = await Hospital.find({});
+
+        // For police stations using geoNear (since you have geo index)
         const policeStations = await PoliceStation.aggregate([
           {
             $geoNear: {
@@ -46,13 +64,23 @@ exports.updateAccidentStatus = async (req, res, next) => {
               spherical: true,
             },
           },
-          { $limit: 20 }, // Get more for driving distance calculation
+          { $limit: 20 },
         ]);
 
-        // Calculate nearest by driving distance
-        nearestAmbulances = await getNearestByDriving({ latitude, longitude }, ambulances);
-        nearestPoliceStations = await getNearestByDriving({ latitude, longitude }, policeStations);
-        nearestHospitals = await getNearestByDriving({ latitude, longitude }, hospitals);
+  
+        nearestAmbulances = await getNearestByDriving(
+          { latitude, longitude },
+          ambulances
+        );
+        nearestPoliceStations = await getNearestByDriving(
+          { latitude, longitude },
+          policeStations
+        );
+        nearestHospitals = await getNearestByDriving(
+          { latitude, longitude },
+          hospitals
+        );
+        
 
         await notifyServices({
       services: nearestAmbulances,
