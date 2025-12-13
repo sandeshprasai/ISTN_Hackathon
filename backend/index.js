@@ -15,7 +15,7 @@ databaseConnection();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:3000","https://istn-hackathon-mu.vercel.app"],
     credentials: true,
   })
 );
