@@ -2,7 +2,10 @@ const Accident = require("../model/accident_schema");
 
 const createAccident = async (req, res) => {
   try {
-    const accident = await Accident.create(req.body);
+    const payload = { ...req.body }; // clone
+    console.log("req.body", payload);
+
+    await Accident.create(payload);
 
     res.status(201).json({
       message: "Accident reported successfully",
@@ -19,7 +22,6 @@ const getAccident = async (req, res) => {
   try {
     const accidents = await Accident.find().sort({ createdAt: -1 });
 
-    console.log("res",accidents)
     res.status(200).json({
       success: true,
       count: accidents.length,
@@ -34,5 +36,7 @@ const getAccident = async (req, res) => {
   }
 };
 
-module.exports = createAccident;
-module.exports = getAccident;
+module.exports = {
+  createAccident,
+  getAccident,
+};
