@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Bell,
 } from "lucide-react";
-import { socket as socketClient } from "@/services/sockets";
+import { getSocket } from "@/services/sockets";
+
 import { Socket } from "socket.io-client";
 import { useAuthStore } from "@/app/store/useAuthStore";
 
@@ -60,7 +61,8 @@ export default function AmbulanceDriverPage() {
 
     console.log("🚑 Connecting socket for ambulance:", ambulanceId);
 
-    const socket = socketClient as Socket;
+   const socket = getSocket();
+
 
     // Register ambulance with backend
     socket.emit("ambulance:register", ambulanceId);
