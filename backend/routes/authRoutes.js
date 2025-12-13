@@ -2,9 +2,11 @@ const express = require("express");
 const loginValidation = require("./../middlewares/loginValidation");
 const loginController = require("../controllers/loginController");
 const ambulanceController = require("../controllers/ambulanceController");
+const logoutController = require("../controllers/logoutController");
 
 const authRouter = express.Router();
 
 authRouter.post("/admin-login", loginValidation, loginController);
 authRouter.post("/ambulance-login", loginValidation, ambulanceController);
+authRouter.post("/logout", logoutController);
 module.exports = authRouter;

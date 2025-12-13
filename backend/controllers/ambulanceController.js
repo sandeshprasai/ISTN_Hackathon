@@ -18,13 +18,11 @@ const ambulanceLogin = async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-   
     const isMatch = await bcrypt.compare(password, ambulance.password);
     if (!isMatch) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    
     const token = jwt.sign(
       { id: ambulance._id, email: ambulance.email, role: "ambulance" },
       process.env.JWT_SECRET,
@@ -40,15 +38,15 @@ const ambulanceLogin = async (req, res) => {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       })
       .status(200)
-.json({
-  message: "Ambulance login successful",
-  ambulance: {
-    id: ambulance._id,
-    name: ambulance.name,
-    email: ambulance.email,
-    role: "ambulance", // manually added role
-  },
-});
+      .json({
+        message: "Ambulance login successful",
+        ambulance: {
+          id: ambulance._id,
+          name: ambulance.name,
+          email: ambulance.email,
+          role: "ambulance", 
+        },
+      });
   } catch (error) {
     console.error("Ambulance login error:", error);
     res.status(500).json({ error: error.message, stack: error.stack });

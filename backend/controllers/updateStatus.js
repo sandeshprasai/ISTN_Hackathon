@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Accident = require("../model/accident_schema");
 const Ambulance = require("../model/ambulance.model");
 const PoliceStation = require("../model/PoliceStation.model");
-const Hospital = require("../model/hospital.model");
+const Hospital = require("../model/Hospital.model");
 const { getNearestByDriving } = require("../services/locationService");
 
 exports.updateAccidentStatus = async (req, res, next) => {
