@@ -19,11 +19,11 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Reports', href: '/reports', icon: FileText },
-    { name: 'New Report', href: '/reports/new', icon: PlusCircle },
-    { name: 'Analytics', href: '/analytics', icon: BarChart },
-    { name: 'Profile', href: '/profile', icon: User },
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Reports', href: '/', icon: FileText },
+    { name: 'New Report', href: '/', icon: PlusCircle },
+    { name: 'Analytics', href: '/', icon: BarChart },
+    { name: 'Profile', href: '/', icon: User },
   ];
 
   return (
