@@ -16,6 +16,17 @@ const SimpleReportForm = () => {
     location: '',
   });
 
+  const [location, setLocation] = useState<{
+  lat: number | null;
+  lng: number | null;
+  address: string;
+}>({
+  lat: null,
+  lng: null,
+  address: '',
+});
+
+
   const [uploadedImages, setUploadedImages] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,6 +45,32 @@ const SimpleReportForm = () => {
     });
   };
 
+  const getCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    alert('Geolocation not supported');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      setLocation(prev => ({
+        ...prev,
+        lat,
+        lng,
+        address: `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`,
+      }));
+    },
+    (error) => {
+      alert('Location permission denied');
+      console.error(error);
+    },
+    { enableHighAccuracy: true }
+  );
+};
+
   const handleRemoveImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
@@ -42,11 +79,17 @@ const SimpleReportForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
+    
     // Prepare data for submission
     const submitData = {
       description: formData.description,
       contactNumber: formData.contactNumber,
-      location: formData.location,
+  location: {
+    lat: location.lat,
+    lng: location.lng,
+ 
+    source: 'gps',
+  },
       images: uploadedImages.map(img => ({
         url: img.url,
         publicId: img.publicId,
