@@ -54,7 +54,13 @@ const LoginPage = () => {
     try {
       const result = await loginUser({ email, password });
 
-      login({ email }, result.token || result.access_token || "admin-token");
+      login(
+        {
+          email,
+          role: "admin",
+        },
+        result.token || result.access_token || "admin-token"
+      );
 
       console.log("Admin login success:", result);
 
