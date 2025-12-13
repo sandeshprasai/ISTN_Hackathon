@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Accident = require("../model/accident_schema");
 const Ambulance = require("../model/ambulance.model");
 const PoliceStation = require("../model/PoliceStation.model");
+const Hospital = require("../model/hospital.model");
 const { getNearestByDriving } = require("../services/locationService");
 
 exports.updateAccidentStatus = async (req, res, next) => {
@@ -10,8 +11,10 @@ exports.updateAccidentStatus = async (req, res, next) => {
     const { status } = req.body;
 
     // Validation
-    if (!mongoose.Types.ObjectId.isValid(_id)) return res.status(400).json({ success: false, message: "Invalid accident ID" });
-    if (!["ACCEPTED", "REJECTED"].includes(status)) return res.status(400).json({ success: false, message: "Invalid status value" });
+    if (!mongoose.Types.ObjectId.isValid(_id))
+      return res.status(400).json({ success: false, message: "Invalid accident ID" });
+    if (!["ACCEPTED", "REJECTED"].includes(status))
+      return res.status(400).json({ success: false, message: "Invalid status value" });
 
     // Update status
     const updatedAccident = await Accident.findByIdAndUpdate(
@@ -19,30 +22,40 @@ exports.updateAccidentStatus = async (req, res, next) => {
       { status, reviewedAt: new Date() },
       { new: true }
     );
-    if (!updatedAccident) return res.status(404).json({ success: false, message: "Accident not found" });
+    if (!updatedAccident)
+      return res.status(404).json({ success: false, message: "Accident not found" });
+
+    // Initialize result variables
+    let nearestAmbulances = [];
+    let nearestPoliceStations = [];
+    let nearestHospitals = [];
 
     if (status === "ACCEPTED") {
       const { latitude, longitude } = updatedAccident.location;
 
       if (latitude != null && longitude != null) {
-        // Get ambulances and police stations
+        // Get all services
         const ambulances = await Ambulance.find({});
+        const hospitals = await Hospital.find({});
         const policeStations = await PoliceStation.aggregate([
-  {
-    $geoNear: {
-      near: { type: "Point", coordinates: [longitude, latitude] },
-      distanceField: "distance",
-      spherical: true,
-    },
-  },
-  { $limit: 20 } // ✅ move limit here
-]);
+          {
+            $geoNear: {
+              near: { type: "Point", coordinates: [longitude, latitude] },
+              distanceField: "distance",
+              spherical: true,
+            },
+          },
+          { $limit: 20 }, // Get more for driving distance calculation
+        ]);
 
-        const nearestAmbulances = await getNearestByDriving({ latitude, longitude }, ambulances);
-        const nearestPoliceStations = await getNearestByDriving({ latitude, longitude }, policeStations);
+        // Calculate nearest by driving distance
+        nearestAmbulances = await getNearestByDriving({ latitude, longitude }, ambulances);
+        nearestPoliceStations = await getNearestByDriving({ latitude, longitude }, policeStations);
+        nearestHospitals = await getNearestByDriving({ latitude, longitude }, hospitals);
 
         console.log("Nearest ambulances:", nearestAmbulances);
         console.log("Nearest police stations:", nearestPoliceStations);
+        console.log("Nearest 3 hospitals:", nearestHospitals);
 
         // TODO: Trigger notifications here
       }
@@ -52,6 +65,9 @@ exports.updateAccidentStatus = async (req, res, next) => {
       success: true,
       message: `Accident ${status.toLowerCase()}`,
       data: updatedAccident,
+      nearestAmbulances,
+      nearestPoliceStations,
+      nearestHospitals,
     });
   } catch (error) {
     return next(error);
