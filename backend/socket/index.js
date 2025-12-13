@@ -1,4 +1,4 @@
-// backend/socket/index.js
+
 const ambulanceSocket = require("./ambulance.socket");
 
 module.exports = (io) => {
@@ -14,7 +14,7 @@ module.exports = (io) => {
       });
     });
     
-    // Handle ambulance socket events
+
     ambulanceSocket(io, socket);
   });
 };
