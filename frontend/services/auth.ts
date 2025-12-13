@@ -28,3 +28,16 @@ export const loginUser = async (data: LoginData) => {
     throw new Error(error.message || 'Something went wrong');
   }
 };
+
+
+export const loginDriver = async (data: { email: string; password: string }) => {
+  const res = await fetch(`${API_URL}/auth/ambulance-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) throw await res.json();
+  return res.json();
+};

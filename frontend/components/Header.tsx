@@ -3,12 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Home, FileText, PlusCircle, BarChart, User, Menu, X, Bell } from 'lucide-react';
+import { Home, FileText, PlusCircle, BarChart, User, Menu, X, Bell, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
+import { useAuthStore } from '@/app/store/useAuthStore';
 
 const Header = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, logout } = useAuthStore();
+  const [openDropdown, setOpenDropdown] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -61,11 +64,39 @@ const Header = () => {
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-600"></span>
             </button>
 
-            {/* Login Button (Desktop) */}
+            {/* Login/Logout (Desktop) */}
             <div className="hidden md:flex items-center space-x-3">
-              <Link href="/login">
-                <Button className="bg-red-600 hover:bg-red-700 text-white">Login</Button>
-              </Link>
+              {!isAuthenticated ? (
+                <Link href="/login">
+                  <Button className="bg-red-600 hover:bg-red-700 text-white">
+                    Login
+                  </Button>
+                </Link>
+              ) : (
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenDropdown(!openDropdown)}
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-red-600 text-white"
+                  >
+                    <User className="h-5 w-5" />
+                  </button>
+
+                  {openDropdown && (
+                    <div className="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-lg border">
+                      <button
+                        onClick={() => {
+                          logout();
+                          setOpenDropdown(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -100,12 +131,26 @@ const Header = () => {
                   </Link>
                 );
               })}
-              {/* Mobile Login Button */}
-              <Link href="/login">
-                <Button className="w-full bg-red-600 hover:bg-red-700 text-white mt-4">
-                  Login
+              
+              {/* Mobile Login/Logout Button */}
+              {!isAuthenticated ? (
+                <Link href="/login">
+                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white mt-4">
+                    Login
+                  </Button>
+                </Link>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white mt-4 flex items-center justify-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
         )}
