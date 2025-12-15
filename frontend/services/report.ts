@@ -42,7 +42,7 @@ export const submitReport = async (data: ReportData) => {
 
 export const getReportStatus = async (id: string) => {
   try {
-    const response = await fetch(`${API_URL}/accidents/status/${id}`, {
+    const response = await fetch(`${API_URL}/accidents/getStatus/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

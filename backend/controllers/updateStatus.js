@@ -14,15 +14,15 @@ exports.updateAccidentStatus = async (req, res, next) => {
 
     // Validation
     if (!mongoose.Types.ObjectId.isValid(_id))
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid accident ID" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid accident ID",
       });
 
     if (!["ACCEPTED", "REJECTED", "verified"].includes(status))
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid status value" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value",
       });
 
     // Update accident status
@@ -37,21 +37,20 @@ exports.updateAccidentStatus = async (req, res, next) => {
     );
 
     if (!updatedAccident)
-      return res.status(404).json({ 
-        success: false, 
-        message: "Accident not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Accident not found",
       });
 
     let dispatchResults = null;
     let nearestServices = null;
 
-    
     if (status === "ACCEPTED" || status === "verified") {
       const { latitude, longitude } = updatedAccident.location;
 
       if (latitude != null && longitude != null) {
         console.log(`📍 Accident location: ${latitude}, ${longitude}`);
-        
+
         // 1. GET ALL SERVICES IN PARALLEL (faster)
         const [ambulances, hospitals, policeStationsGeo] = await Promise.all([
           Ambulance.find({}),
@@ -69,31 +68,37 @@ exports.updateAccidentStatus = async (req, res, next) => {
         ]);
 
         // 2. FIND NEAREST SERVICES IN PARALLEL
-        const [nearestAmbulances, nearestHospitals, nearestPolice] = await Promise.all([
-          getNearestByDriving({ latitude, longitude }, ambulances),
-          getNearestByDriving({ latitude, longitude }, hospitals),
-          getNearestByDriving({ latitude, longitude }, policeStationsGeo),
-        ]);
+        const [nearestAmbulances, nearestHospitals, nearestPolice] =
+          await Promise.all([
+            getNearestByDriving({ latitude, longitude }, ambulances),
+            getNearestByDriving({ latitude, longitude }, hospitals),
+            getNearestByDriving({ latitude, longitude }, policeStationsGeo),
+          ]);
 
         // Save for response
         nearestServices = {
           ambulances: nearestAmbulances.slice(0, 3), // Top 3
-          hospitals: nearestHospitals.slice(0, 2),   // Top 2 hospitals
-          police: nearestPolice.slice(0, 2),         // Top 2 police stations
+          hospitals: nearestHospitals.slice(0, 2), // Top 2 hospitals
+          police: nearestPolice.slice(0, 2), // Top 2 police stations
         };
 
-        console.log("🚑 Nearest ambulances:", nearestServices.ambulances.length);
+        console.log(
+          "🚑 Nearest ambulances:",
+          nearestServices.ambulances.length
+        );
         console.log("🏥 Nearest hospitals:", nearestServices.hospitals.length);
         console.log("👮 Nearest police:", nearestServices.police.length);
 
         // 3. DISPATCH AMBULANCES (using your existing function)
         const ambulanceDispatch = await dispatchAmbulance(updatedAccident);
-        
-      
+
         dispatchResults = {
           ambulance: ambulanceDispatch,
-           police: await notifyPolice(nearestServices.police, updatedAccident),
-          hospital: await notifyHospitals(nearestServices.hospitals, updatedAccident),
+          police: await notifyPolice(nearestServices.police, updatedAccident),
+          hospital: await notifyHospitals(
+            nearestServices.hospitals,
+            updatedAccident
+          ),
         };
 
         console.log("✅ All services dispatched:", dispatchResults);
@@ -116,8 +121,8 @@ exports.updateAccidentStatus = async (req, res, next) => {
 async function notifyPolice(policeStations, accident) {
   try {
     console.log(`👮 Notifying ${policeStations.length} police stations`);
-    
-    const notifications = policeStations.map(station => ({
+
+    const notifications = policeStations.map((station) => ({
       stationId: station._id,
       name: station.name,
       address: station.address,
@@ -126,18 +131,17 @@ async function notifyPolice(policeStations, accident) {
       accidentId: accident._id,
       location: accident.address,
       severity: accident.severity,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }));
 
-   
-    notifications.forEach(notif => {
+    notifications.forEach((notif) => {
       console.log(`📞 Police alert: ${notif.name} - ${notif.distance}km away`);
     });
 
     return {
       notified: policeStations.length,
-      stations: policeStations.map(s => s.name),
-      method: "logged" // Change to "sms", "email", "api" when implemented
+      stations: policeStations.map((s) => s.name),
+      method: "logged", // Change to "sms", "email", "api" when implemented
     };
   } catch (error) {
     console.error("❌ Police notification failed:", error);
@@ -145,12 +149,11 @@ async function notifyPolice(policeStations, accident) {
   }
 }
 
-
 async function notifyHospitals(hospitals, accident) {
   try {
     console.log(`🏥 Notifying ${hospitals.length} hospitals`);
-    
-    const notifications = hospitals.map(hospital => ({
+
+    const notifications = hospitals.map((hospital) => ({
       hospitalId: hospital._id,
       name: hospital.name,
       address: hospital.address,
@@ -160,18 +163,19 @@ async function notifyHospitals(hospitals, accident) {
       location: accident.address,
       severity: accident.severity,
       expectedPatients: accident.severity === "HIGH" ? "Multiple" : "Single",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }));
 
-    
-    notifications.forEach(notify => {
-      console.log(`🏥 Hospital alert: ${notify.name} - Prepare for ${notify.expectedPatients} patient(s)`);
+    notifications.forEach((notify) => {
+      console.log(
+        `🏥 Hospital alert: ${notify.name} - Prepare for ${notify.expectedPatients} patient(s)`
+      );
     });
 
     return {
       notified: hospitals.length,
-      hospitals: hospitals.map(h => h.name),
-      method: "logged"
+      hospitals: hospitals.map((h) => h.name),
+      method: "logged",
     };
   } catch (error) {
     console.error("❌ Hospital notification failed:", error);

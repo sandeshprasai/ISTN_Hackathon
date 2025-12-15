@@ -94,20 +94,19 @@ const SimpleReportForm = () => {
     }
 
     const submitData = {
-  description: formData.description,
-  contactNumber: formData.contactNumber,
-  location: {
-    lat: location.lat!,
-    lng: location.lng!,
-    source: "gps",
-  },
-  images: uploadedImages.map((img) => ({
-    url: img.url,
-    publicId: img.publicId,
-    format: img.format,
-  })),
-};
-
+      description: formData.description,
+      phoneNumber: formData.contactNumber, // rename field to match backend
+      location: {
+        latitude: location.lat!, // rename lat -> latitude
+        longitude: location.lng!, // rename lng -> longitude
+        source: "gps",
+      },
+      images: uploadedImages.map((img) => ({
+        url: img.url,
+        public_id: img.publicId, // must match backend
+        format: img.format,
+      })),
+    };
 
     try {
       const result = await submitReport(submitData);

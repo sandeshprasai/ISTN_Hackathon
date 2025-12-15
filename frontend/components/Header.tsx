@@ -16,8 +16,8 @@ const Header = () => {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Reports', href: '/admin/dashboard', icon: FileText },
-    { name: 'New Report', href: '/new-report', icon: PlusCircle },
-    { name: 'Analytics', href: '/analytics', icon: BarChart },
+    { name: 'Analytics', href: '/admin/analytics', icon: PlusCircle },
+    { name: 'Ambulance', href: '/ambulance', icon: BarChart },
    
   ];
 
@@ -143,24 +143,25 @@ const Header = () => {
               })}
               
               {/* Mobile Login/Logout Button */}
-              {!isAuthenticated ? (
-                <Link href="/login">
-                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white mt-4">
-                    Login
-                  </Button>
-                </Link>
-              ) : (
-                <Button 
-                  onClick={() => {
-                  handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white mt-4 flex items-center justify-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </Button>
-              )}
+            {!isAuthenticated ? (
+  <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+    <Button className="w-full bg-red-600 hover:bg-red-700 text-white mt-4">
+      Login
+    </Button>
+  </Link>
+) : (
+  <Button 
+    onClick={() => {
+      handleLogout();
+      setIsMenuOpen(false);
+    }}
+    className="w-full bg-red-600 hover:bg-red-700 text-white mt-4 flex items-center justify-center gap-2"
+  >
+    <LogOut className="h-4 w-4" />
+    Logout
+  </Button>
+)}
+
             </div>
           </div>
         )}
