@@ -1,10 +1,11 @@
+// backend/controllers/verification.controller.js
 const mongoose = require("mongoose");
 const Accident = require("../model/accident_schema");
 const Ambulance = require("../model/ambulance.model");
 const PoliceStation = require("../model/PoliceStation.model");
 const Hospital = require("../model/Hospital.model");
 const { getNearestByDriving } = require("../services/locationService");
-const { notifyServices } = require("../services/notificationDispatcher");
+const { dispatchAmbulance } = require("../services/dispatchAmbulance.service");
 
 exports.updateAccidentStatus = async (req, res, next) => {
   try {
@@ -13,72 +14,89 @@ exports.updateAccidentStatus = async (req, res, next) => {
 
     // Validation
     if (!mongoose.Types.ObjectId.isValid(_id))
-      return res.status(400).json({ success: false, message: "Invalid accident ID" });
-    if (!["ACCEPTED", "REJECTED"].includes(status))
-      return res.status(400).json({ success: false, message: "Invalid status value" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid accident ID" 
+      });
 
-    // Update status
+    if (!["ACCEPTED", "REJECTED", "verified"].includes(status))
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid status value" 
+      });
+
+    // Update accident status
     const updatedAccident = await Accident.findByIdAndUpdate(
       _id,
-      { status, reviewedAt: new Date() },
+      {
+        status,
+        reviewedAt: new Date(),
+        verifiedBy: req.user?._id, // If you have authentication
+      },
       { new: true }
     );
+
     if (!updatedAccident)
-      return res.status(404).json({ success: false, message: "Accident not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Accident not found" 
+      });
 
-    // Initialize result variables
-    let nearestAmbulances = [];
-    let nearestPoliceStations = [];
-    let nearestHospitals = [];
+    let dispatchResults = null;
+    let nearestServices = null;
 
-    if (status === "ACCEPTED") {
+    
+    if (status === "ACCEPTED" || status === "verified") {
       const { latitude, longitude } = updatedAccident.location;
 
       if (latitude != null && longitude != null) {
-        // Get all services
-        const ambulances = await Ambulance.find({});
-        const hospitals = await Hospital.find({});
-        const policeStations = await PoliceStation.aggregate([
-          {
-            $geoNear: {
-              near: { type: "Point", coordinates: [longitude, latitude] },
-              distanceField: "distance",
-              spherical: true,
+        console.log(`📍 Accident location: ${latitude}, ${longitude}`);
+        
+        // 1. GET ALL SERVICES IN PARALLEL (faster)
+        const [ambulances, hospitals, policeStationsGeo] = await Promise.all([
+          Ambulance.find({}),
+          Hospital.find({}),
+          PoliceStation.aggregate([
+            {
+              $geoNear: {
+                near: { type: "Point", coordinates: [longitude, latitude] },
+                distanceField: "distance",
+                spherical: true,
+              },
             },
-          },
-          { $limit: 20 }, // Get more for driving distance calculation
+            { $limit: 20 },
+          ]),
         ]);
 
-        // Calculate nearest by driving distance
-        nearestAmbulances = await getNearestByDriving({ latitude, longitude }, ambulances);
-        nearestPoliceStations = await getNearestByDriving({ latitude, longitude }, policeStations);
-        nearestHospitals = await getNearestByDriving({ latitude, longitude }, hospitals);
+        // 2. FIND NEAREST SERVICES IN PARALLEL
+        const [nearestAmbulances, nearestHospitals, nearestPolice] = await Promise.all([
+          getNearestByDriving({ latitude, longitude }, ambulances),
+          getNearestByDriving({ latitude, longitude }, hospitals),
+          getNearestByDriving({ latitude, longitude }, policeStationsGeo),
+        ]);
 
-        await notifyServices({
-      services: nearestAmbulances,
-      serviceType: "Ambulance",
-      accidentLocation: { latitude, longitude },
-    });
+        // Save for response
+        nearestServices = {
+          ambulances: nearestAmbulances.slice(0, 3), // Top 3
+          hospitals: nearestHospitals.slice(0, 2),   // Top 2 hospitals
+          police: nearestPolice.slice(0, 2),         // Top 2 police stations
+        };
 
-    await notifyServices({
-      services: nearestPoliceStations,
-      serviceType: "Police Station",
-      accidentLocation: { latitude, longitude },
-    });
+        console.log("🚑 Nearest ambulances:", nearestServices.ambulances.length);
+        console.log("🏥 Nearest hospitals:", nearestServices.hospitals.length);
+        console.log("👮 Nearest police:", nearestServices.police.length);
 
-    await notifyServices({
-      services: nearestHospitals,
-      serviceType: "Hospital",
-      accidentLocation: { latitude, longitude },
-    });
-
+        // 3. DISPATCH AMBULANCES (using your existing function)
+        const ambulanceDispatch = await dispatchAmbulance(updatedAccident);
         
+      
+        dispatchResults = {
+          ambulance: ambulanceDispatch,
+           police: await notifyPolice(nearestServices.police, updatedAccident),
+          hospital: await notifyHospitals(nearestServices.hospitals, updatedAccident),
+        };
 
-        console.log("Nearest ambulances:", nearestAmbulances);
-        console.log("Nearest police stations:", nearestPoliceStations);
-        console.log("Nearest 3 hospitals:", nearestHospitals);
-
-        // TODO: Trigger notifications here
+        console.log("✅ All services dispatched:", dispatchResults);
       }
     }
 
@@ -86,11 +104,77 @@ exports.updateAccidentStatus = async (req, res, next) => {
       success: true,
       message: `Accident ${status.toLowerCase()}`,
       data: updatedAccident,
-      nearestAmbulances,
-      nearestPoliceStations,
-      nearestHospitals,
+      nearestServices,
+      dispatchResults,
     });
   } catch (error) {
+    console.error("❌ Verification error:", error);
     return next(error);
   }
 };
+
+async function notifyPolice(policeStations, accident) {
+  try {
+    console.log(`👮 Notifying ${policeStations.length} police stations`);
+    
+    const notifications = policeStations.map(station => ({
+      stationId: station._id,
+      name: station.name,
+      address: station.address,
+      phone: station.phone,
+      distance: station.distanceKm,
+      accidentId: accident._id,
+      location: accident.address,
+      severity: accident.severity,
+      timestamp: new Date().toISOString()
+    }));
+
+   
+    notifications.forEach(notif => {
+      console.log(`📞 Police alert: ${notif.name} - ${notif.distance}km away`);
+    });
+
+    return {
+      notified: policeStations.length,
+      stations: policeStations.map(s => s.name),
+      method: "logged" // Change to "sms", "email", "api" when implemented
+    };
+  } catch (error) {
+    console.error("❌ Police notification failed:", error);
+    return { error: error.message };
+  }
+}
+
+
+async function notifyHospitals(hospitals, accident) {
+  try {
+    console.log(`🏥 Notifying ${hospitals.length} hospitals`);
+    
+    const notifications = hospitals.map(hospital => ({
+      hospitalId: hospital._id,
+      name: hospital.name,
+      address: hospital.address,
+      phone: hospital.phone,
+      distance: hospital.distanceKm,
+      accidentId: accident._id,
+      location: accident.address,
+      severity: accident.severity,
+      expectedPatients: accident.severity === "HIGH" ? "Multiple" : "Single",
+      timestamp: new Date().toISOString()
+    }));
+
+    
+    notifications.forEach(notify => {
+      console.log(`🏥 Hospital alert: ${notify.name} - Prepare for ${notify.expectedPatients} patient(s)`);
+    });
+
+    return {
+      notified: hospitals.length,
+      hospitals: hospitals.map(h => h.name),
+      method: "logged"
+    };
+  } catch (error) {
+    console.error("❌ Hospital notification failed:", error);
+    return { error: error.message };
+  }
+}

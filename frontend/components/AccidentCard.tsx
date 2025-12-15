@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Phone, Check, X } from 'lucide-react';
 import SmallMapCard from '@/components/smallMapCard';
 import { reverseGeocode } from '@/lib/geocode';
-import { updateAccidentStatus, getReportStatus } from '@/services/report';
+import { updateAccidentStatus, getAccident } from '@/services/report';
+
 
 export interface Accident {
   _id: string;
@@ -46,24 +47,6 @@ export default function AccidentCard({ accident, onAccept, onReject }: AccidentC
     };
     fetchAddress();
   }, [accident.location.latitude, accident.location.longitude]);
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const response = await getReportStatus(accident._id);
-        if (response.success && response.status) {
-          setStatus(response.status);
-        }
-      } catch (error) {
-        console.error('Failed to fetch status:', error);
-      }
-    };
-    
-    // Only fetch status if not already provided
-    if (!accident.status) {
-      fetchStatus();
-    }
-  }, [accident._id, accident.status]);
 
   const handleAccept = async () => {
     setIsProcessing(true);

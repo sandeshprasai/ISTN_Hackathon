@@ -1,35 +1,40 @@
-'use client';
-import { useState,useEffect, useEffectEvent } from 'react';
-import { Camera, Phone, MapPin, X, Check, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import CloudinaryUploadWidget from '@/components/CloudinaryWidget';
-import  GoogleMap  from   "../components/GoogleMap";
-import { submitReport } from '@/services/report';
+"use client";
+import { useState, useEffect, useEffectEvent } from "react";
+import { Camera, Phone, MapPin, X, Check, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import CloudinaryUploadWidget from "@/components/CloudinaryWidget";
+import GoogleMap from "../components/GoogleMap";
+import { submitReport } from "@/services/report";
 
 const SimpleReportForm = () => {
   const [formData, setFormData] = useState({
-    description: '',
-    contactNumber: '',
-    location: '',
+    description: "",
+    contactNumber: "",
+    location: "",
   });
 
-  useEffect(() =>{
-    getCurrentLocation()
-  },[])
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
   const [location, setLocation] = useState<{
-  lat: number | null;
-  lng: number | null;
-  address: string;
-}>({
-  lat: null,
-  lng: null,
-  address: '',
-});
-
+    lat: number | null;
+    lng: number | null;
+    address: string;
+  }>({
+    lat: null,
+    lng: null,
+    address: "",
+  });
 
   const [uploadedImages, setUploadedImages] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,85 +47,87 @@ const SimpleReportForm = () => {
       format: result.format,
       thumbnail: result.thumbnail_url,
     };
-    
-    setUploadedImages(prev => {
+
+    setUploadedImages((prev) => {
       if (prev.length >= 5) return prev;
       return [...prev, newImage];
     });
   };
 
   const getCurrentLocation = () => {
-  if (!navigator.geolocation) {
-    alert('Geolocation not supported');
-    return;
-  }
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
 
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
 
-      setLocation(prev => ({
-        ...prev,
-        lat,
-        lng,
-        address: `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`,
-      }));
-    },
-    (error) => {
-      alert('Location permission denied');
-      console.error(error);
-    },
-    { enableHighAccuracy: true }
-  );
-};
-
-  const handleRemoveImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+        setLocation((prev) => ({
+          ...prev,
+          lat,
+          lng,
+          address: `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`,
+        }));
+      },
+      (error) => {
+        alert("Location permission denied");
+        console.error(error);
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  if (location.lat === null || location.lng === null) {
-  alert('Location is required');
-  setIsSubmitting(false);
-  return;
-}
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
-const submitData = {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    if (location.lat === null || location.lng === null) {
+      alert("Location is required");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const submitData = {
   description: formData.description,
-  phoneNumber: formData.contactNumber,
+  contactNumber: formData.contactNumber,
   location: {
-    latitude: location.lat,
-    longitude: location.lng,
-    source: 'gps',
+    lat: location.lat!,
+    lng: location.lng!,
+    source: "gps",
   },
-  images: uploadedImages.map(img => ({
+  images: uploadedImages.map((img) => ({
     url: img.url,
-    public_id: img.publicId,
+    publicId: img.publicId,
     format: img.format,
   })),
 };
 
 
-  try {
-    const result = await submitReport(submitData);
-    console.log('Report submitted successfully:', result);
-    alert('Report submitted successfully!');
-    setFormData({ description: '', contactNumber: '', location: '' });
-    setUploadedImages([]);
-  } catch (error: any) {
-    console.error('Failed to submit report:', error.message);
-    alert(`Error: ${error.message}`);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    try {
+      const result = await submitReport(submitData);
+      console.log("Report submitted successfully:", result);
+      alert("Report submitted successfully!");
+      setFormData({ description: "", contactNumber: "", location: "" });
+      setUploadedImages([]);
+    } catch (error: any) {
+      console.error("Failed to submit report:", error.message);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -148,7 +155,9 @@ const submitData = {
                   </div>
                   <div>
                     <CardTitle className="text-lg">Upload Photos</CardTitle>
-                    <CardDescription>Upload clear photos of the incident (max 5)</CardDescription>
+                    <CardDescription>
+                      Upload clear photos of the incident (max 5)
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -156,20 +165,33 @@ const submitData = {
                 {/* Cloudinary Upload Widget */}
                 <div className="mb-6">
                   <div className="flex flex-col items-center justify-center w-full">
-                    <div className={`
+                    <div
+                      className={`
                       flex flex-col items-center justify-center w-full h-48 
                       border-2 border-dashed rounded-xl
                       transition-all duration-200
-                      ${uploadedImages.length > 0 
-                        ? 'border-blue-400 bg-blue-50' 
-                        : 'border-gray-300 bg-gray-50'
+                      ${
+                        uploadedImages.length > 0
+                          ? "border-blue-400 bg-blue-50"
+                          : "border-gray-300 bg-gray-50"
                       }
-                    `}>
+                    `}
+                    >
                       <div className="flex flex-col items-center justify-center p-4">
-                        <Upload className={`h-10 w-10 mb-3 ${uploadedImages.length > 0 ? 'text-blue-500' : 'text-gray-400'}`} />
-                        <CloudinaryUploadWidget onUploadSuccess={handleCloudinaryUpload} />
+                        <Upload
+                          className={`h-10 w-10 mb-3 ${
+                            uploadedImages.length > 0
+                              ? "text-blue-500"
+                              : "text-gray-400"
+                          }`}
+                        />
+                        <CloudinaryUploadWidget
+                          onUploadSuccess={handleCloudinaryUpload}
+                        />
                         {uploadedImages.length >= 5 && (
-                          <p className="text-xs text-red-600 mt-2">Maximum 5 photos reached</p>
+                          <p className="text-xs text-red-600 mt-2">
+                            Maximum 5 photos reached
+                          </p>
                         )}
                       </div>
                     </div>
@@ -183,10 +205,12 @@ const submitData = {
                           Uploaded ({uploadedImages.length}/5)
                         </p>
                         {uploadedImages.length >= 5 && (
-                          <span className="text-xs text-red-600">Maximum 5 photos</span>
+                          <span className="text-xs text-red-600">
+                            Maximum 5 photos
+                          </span>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         {uploadedImages.map((img, index) => (
                           <div key={index} className="relative group">
@@ -206,7 +230,8 @@ const submitData = {
                               <X className="h-3 w-3" />
                             </button>
                             <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 text-center truncate">
-                              {img.format?.toUpperCase() || 'Image'} • Cloudinary
+                              {img.format?.toUpperCase() || "Image"} •
+                              Cloudinary
                             </div>
                           </div>
                         ))}
@@ -287,8 +312,6 @@ const submitData = {
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     </div>
                   </div>
-
-                  
                 </div>
               </CardContent>
             </Card>
@@ -298,53 +321,96 @@ const submitData = {
           <div className="lg:col-span-1 space-y-6">
             {/* Map Placeholder */}
             <Card className="shadow-sm">
-
-  <CardContent className="pt-6">
-    
-    <div className="mt-4 text-center">
-      <GoogleMap />  
-     
-    </div>
-  </CardContent>
-</Card>
+              <CardContent className="pt-6">
+                <div className="mt-4 text-center">
+                  <GoogleMap />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Submit Card */}
             <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
               <CardHeader>
                 <CardTitle>Ready to Submit</CardTitle>
-                <CardDescription>
-                  Review and submit your report
-                </CardDescription>
+                <CardDescription>Review and submit your report</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Progress Check */}
                 <div className="space-y-3">
-                  <div className={`flex items-center space-x-3 ${uploadedImages.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center ${uploadedImages.length > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      {uploadedImages.length > 0 ? <Check className="h-4 w-4" /> : <span className="text-xs">1</span>}
+                  <div
+                    className={`flex items-center space-x-3 ${
+                      uploadedImages.length > 0
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                        uploadedImages.length > 0
+                          ? "bg-green-100"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      {uploadedImages.length > 0 ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <span className="text-xs">1</span>
+                      )}
                     </div>
-                    <span className="text-sm">Photos uploaded: {uploadedImages.length}/5</span>
+                    <span className="text-sm">
+                      Photos uploaded: {uploadedImages.length}/5
+                    </span>
                   </div>
 
-                  <div className={`flex items-center space-x-3 ${formData.description ? 'text-green-600' : 'text-gray-400'}`}>
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center ${formData.description ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      {formData.description ? <Check className="h-4 w-4" /> : <span className="text-xs">2</span>}
+                  <div
+                    className={`flex items-center space-x-3 ${
+                      formData.description ? "text-green-600" : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                        formData.description ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      {formData.description ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <span className="text-xs">2</span>
+                      )}
                     </div>
                     <span className="text-sm">Description provided</span>
                   </div>
 
-                  <div className={`flex items-center space-x-3 ${formData.contactNumber ? 'text-green-600' : 'text-gray-400'}`}>
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center ${formData.contactNumber ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      {formData.contactNumber ? <Check className="h-4 w-4" /> : <span className="text-xs">3</span>}
+                  <div
+                    className={`flex items-center space-x-3 ${
+                      formData.contactNumber
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                        formData.contactNumber ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      {formData.contactNumber ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <span className="text-xs">3</span>
+                      )}
                     </div>
                     <span className="text-sm">Contact details filled</span>
                   </div>
                 </div>
 
                 {/* Submit Button */}
-                <Button 
+                <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !formData.description || !formData.contactNumber}
+                  disabled={
+                    isSubmitting ||
+                    !formData.description ||
+                    !formData.contactNumber
+                  }
                   className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 >
                   {isSubmitting ? (
@@ -353,14 +419,17 @@ const submitData = {
                       Submitting...
                     </>
                   ) : (
-                    'Submit Report'
+                    "Submit Report"
                   )}
                 </Button>
 
                 {/* Emergency Notice */}
                 <div className="pt-4 border-t border-blue-200">
                   <p className="text-xs text-gray-600 text-center">
-                    <span className="font-semibold text-red-600">Emergency?</span> Call 911 immediately
+                    <span className="font-semibold text-red-600">
+                      Emergency?
+                    </span>{" "}
+                    Call 911 immediately
                   </p>
                 </div>
               </CardContent>
